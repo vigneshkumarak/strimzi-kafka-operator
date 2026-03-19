@@ -359,8 +359,10 @@ public class KafkaBrokerConfigurationBuilder {
             writer.println("inter.broker.listener.name=" + REPLICATION_LISTENER_NAME);
         }
 
-        // Control plane listener is on all ZooKeeper based brokers, needed during migration as well, when broker still using ZooKeeper but KRaft controllers are ready
-        if (node.broker() && kafkaMetadataConfigState.isZooKeeperToMigration()) {
+        // Control plane listener property is only needed during ZK-to-KRaft migration (PRE_MIGRATION / MIGRATION).
+        // In pure ZK mode, omitting it causes Kafka to default to inter.broker.listener.name,
+        // which is required for cluster stretching where the control plane must use the shared cross-env listener.
+        if (node.broker() && !kafkaMetadataConfigState.isZooKeeper() && kafkaMetadataConfigState.isZooKeeperToMigration()) {
             writer.println("control.plane.listener.name=" + CONTROL_PLANE_LISTENER_NAME);
         }
 
@@ -825,10 +827,20 @@ public class KafkaBrokerConfigurationBuilder {
      */
     public KafkaBrokerConfigurationBuilder withUserConfiguration(KafkaConfiguration userConfig, boolean injectCcMetricsReporter)  {
         if (userConfig != null && !userConfig.getConfiguration().isEmpty()) {
-            if (injectCcMetricsReporter)  {
-                // We have to create a copy of the configuration before we modify it
-                userConfig = new KafkaConfiguration(userConfig);
+            // We have to create a copy of the configuration before we modify it
+            userConfig = new KafkaConfiguration(userConfig);
 
+            // In POST_MIGRATION or KRAFT states, brokers run in pure KRaft mode and must not
+            // have ZooKeeper configuration. User-provided ZK overrides (used during cluster
+            // stretching) are stripped automatically so they can remain in the CR for rollback
+            // safety without breaking the broker config.
+            if (node.broker() && kafkaMetadataConfigState.isPostMigrationToKRaft()) {
+                userConfig.removeConfigOption("zookeeper.connect");
+                userConfig.removeConfigOption("zookeeper.clientCnxnSocket");
+                userConfig.removeConfigOption("zookeeper.ssl.client.enable");
+            }
+
+            if (injectCcMetricsReporter)  {
                 // We configure the Cruise Control Metrics Reporter is needed
                 if (userConfig.getConfigOption(CruiseControlMetricsReporter.KAFKA_METRIC_REPORTERS_CONFIG_FIELD) != null) {
                     if (!userConfig.getConfigOption(CruiseControlMetricsReporter.KAFKA_METRIC_REPORTERS_CONFIG_FIELD).contains(CruiseControlMetricsReporter.CRUISE_CONTROL_METRIC_REPORTER)) {
