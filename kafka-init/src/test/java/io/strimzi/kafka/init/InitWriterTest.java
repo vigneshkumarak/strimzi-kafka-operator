@@ -95,6 +95,42 @@ public class InitWriterTest {
     }
 
     @Test
+    public void testWriteJaasConfig() throws IOException {
+
+        // create and configure (env vars) the path to the rack-id file
+        File kafkaFolder = new File(tempDir.getPath(), "/opt/kafka");
+        String jaasFolder = kafkaFolder.getAbsolutePath() + "/jaas.conf";
+        new File(jaasFolder).mkdirs();
+
+        Map<String, String> envVars = new HashMap<>(ENV_VARS);
+        envVars.put(InitWriterConfig.INIT_FOLDER.key(), jaasFolder);
+
+        InitWriterConfig config = InitWriterConfig.fromMap(envVars);
+
+        KubernetesClient client = mockKubernetesClient(config.getNodeName(), Map.of(), ADDRESSES);
+
+        InitWriter writer = new InitWriter(client, config);
+        assertThat(writer.writeExternalAddress(), is(true));
+
+        writer.configConvertAndWrite("{\n" +
+                "  \"kafka_admin\": \"adminusername:adminpassword\",\n" +
+                "  \"zookeeper_user\": \"zkuser:zkpassword\",\n" +
+                "  \"kafka_user_1\": \"kafkauser1:kafkauser1password\",\n" +
+                "  \"kafka_user_2\": \"kafkauser2:kafkauser2password\",\n" +
+                "  \"kafka_user_3\": \"kafkauser3:kafkauser3password\"\n" +
+                "}");
+        assertThat(readFile(jaasFolder + "/jaas.conf"), is("KafkaServer {\n" +
+                "  org.apache.kafka.common.security.plain.PlainLoginModule required\n" +
+                "  username=\"adminusername\"\n" +
+                "  password=\"adminpassword\"\n" +
+                "  user_adminusername=\"adminpassword\"\n" +
+                "  user_kafkauser1=\"kafkauser1password\"\n" +
+                "  user_kafkauser2=\"kafkauser2password\"\n" +
+                "  user_kafkauser3=\"kafkauser3password\";\n" +
+                "};"));
+    }
+
+    @Test
     public void testWriteRackFailWithMissingKubernetesZoneLabel() {
         // the cluster node will not have the requested label
         Map<String, String> labels = new HashMap<>(LABELS);

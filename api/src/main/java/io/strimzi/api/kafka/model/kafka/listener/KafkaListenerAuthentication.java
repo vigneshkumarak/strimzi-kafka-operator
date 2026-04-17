@@ -28,6 +28,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = KafkaListenerAuthenticationScramSha512.SCRAM_SHA_512, value = KafkaListenerAuthenticationScramSha512.class),
     @JsonSubTypes.Type(name = KafkaListenerAuthenticationOAuth.TYPE_OAUTH, value = KafkaListenerAuthenticationOAuth.class),
     @JsonSubTypes.Type(name = KafkaListenerAuthenticationCustom.TYPE_CUSTOM, value = KafkaListenerAuthenticationCustom.class),
+    @JsonSubTypes.Type(name = KafkaListenerAuthenticationSaslScramAndPlain.SASL_SCRAM_AND_PLAIN, value = KafkaListenerAuthenticationSaslScramAndPlain.class),
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Buildable(
@@ -44,7 +45,8 @@ public abstract class KafkaListenerAuthentication implements UnknownPropertyPres
             "`scram-sha-512` type uses SASL SCRAM-SHA-512 Authentication. " +
             "`tls` type uses TLS Client Authentication. " +
             "`tls` type is supported only on TLS listeners." +
-            "`custom` type allows for any authentication type to be used.")
+            "`custom` type allows for any authentication type to be used." +
+            "`sasl_scram_and_plain` type uses SASL SCRAM-SHA-512 and PLAINTEXT Authentication, either can be used. ")
     public abstract String getType();
 
     @Override

@@ -4,7 +4,10 @@
  */
 package io.strimzi.kafka.init;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.NodeAddress;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.strimzi.api.kafka.model.kafka.listener.NodeAddressType;
 import io.strimzi.operator.common.model.NodeUtils;
@@ -29,6 +32,7 @@ public class InitWriter {
 
     protected final static String FILE_RACK_ID = "rack.id";
     protected final static String FILE_EXTERNAL_ADDRESS = "external.address";
+    protected final static String FILE_JAAS_CONF = "jaas.conf";
 
     /**
      * Constructs the InitWriter
@@ -110,6 +114,102 @@ public class InitWriter {
     }
 
     /**
+     * Write the fwss user secrets to jaas.conf
+     *
+     * @param secretList   List of fwss secrets in the namespace
+     * @return if the operation was executed successfully
+     */
+    public boolean writeFwssSecretsToJaasConf(SecretList secretList) {
+
+        if (secretList.getItems().isEmpty()) {
+            // no fwss labeled secrets, then exit
+            LOGGER.error("SecretList is empty");
+            return false;
+        }
+        List<Secret> secrets = secretList.getItems();
+        List<Secret> kafkaSecret = secrets.stream()
+                .filter(secret -> secret.getMetadata().getName().equals(config.getFwssSecretName()))
+                .toList();
+        if (kafkaSecret.isEmpty()) {
+            // no fwss secrets with the give name, then exit
+            LOGGER.error("No secrets with name '{}' found.", config.getFwssSecretName());
+            return false;
+        }
+
+        Map.Entry<String, String> adminNameAndSecret = kafkaSecret.get(0).getData().entrySet().iterator().next();
+        String kafkaFwssJaasConfig = new String(java.util.Base64.getDecoder().decode(adminNameAndSecret.getValue())).trim();
+        if (!isValidJSON(kafkaFwssJaasConfig)) {
+            LOGGER.error("Invalid JSON format for KafkaFwssJaasConfig");
+            return false;
+        }
+        return configConvertAndWrite(kafkaFwssJaasConfig);
+
+    }
+
+    /**
+     * Convert fwss jaas secret to jaas config
+     *
+     * @param kafkaFwssJaasConfig   Information to be written
+     * @return              true if conversion succeeded, false otherwise
+     */
+    public boolean configConvertAndWrite(String kafkaFwssJaasConfig) {
+     
+        if (kafkaFwssJaasConfig.isEmpty()) {
+            LOGGER.error("KafkaFwssJaasConfig is empty");
+            return false;
+        }
+        // Removing braces and extra whitespace, then splitting by commas
+        String input = kafkaFwssJaasConfig.replaceAll("[{}\"]", "").trim();
+        String[] pairs = input.split(",");
+
+        // Initialize StringBuilder for formatted output
+        StringBuilder jaasConfig = new StringBuilder();
+        jaasConfig.append("KafkaServer {\n");
+        jaasConfig.append("  org.apache.kafka.common.security.plain.PlainLoginModule required\n");
+
+        // Process each key-value pair
+        for (String pair : pairs) {
+            String[] keyValue = pair.trim().split(":");
+            String key = keyValue[0].trim();
+            String username = keyValue[1].trim();
+            String password = keyValue[2].trim();
+
+            if (key.equals("kafka_admin")) {
+                if (username.isEmpty() || password.isEmpty()) {
+                    LOGGER.error("Either of admin username or password is empty");
+                    return false;
+                }
+                jaasConfig.append("  username=\"").append(username).append("\"\n");
+                jaasConfig.append("  password=\"").append(password).append("\"\n");
+                jaasConfig.append("  user_").append(username).append("=\"").append(password).append("\"\n");
+            } else if (key.startsWith("kafka_user")) {
+                jaasConfig.append("  user_").append(username).append("=\"").append(password).append("\"\n");
+            }
+        }
+        // Replace the last newline character jaasConfig with ";"
+        jaasConfig.setCharAt(jaasConfig.length() - 1, ';');
+        jaasConfig.append("\n};");
+
+        return write(FILE_JAAS_CONF, jaasConfig.toString());
+    }
+
+    /**
+     * Checks if the provided string is a valid JSON
+     *
+     * @param jsonString   string to be checked
+     * @return             true if valid json succeeded, false otherwise
+     */
+    private boolean isValidJSON(String jsonString) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.readTree(jsonString);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Write provided information into a file
      *
      * @param file          Target file
@@ -126,7 +226,12 @@ public class InitWriter {
                 LOGGER.error("Failed to write the information {} to file {}", information, file);
                 isWritten = false;
             } else {
-                LOGGER.info("Information {} written successfully to file {}", information, file);
+                if (file.equals(FILE_JAAS_CONF)) {
+                    // to mask jaas secrets
+                    LOGGER.info("Jaas information string of length {} written successfully to file {}", information.length(), file);
+                } else {
+                    LOGGER.info("Information {} written successfully to file {}", information, file);
+                }
                 isWritten = true;
             }
         } catch (IOException e) {

@@ -275,7 +275,8 @@ spec:
                                   - scram-sha-512
                                   - oauth
                                   - custom
-                                description: Authentication type. `oauth` type uses SASL OAUTHBEARER Authentication. `scram-sha-512` type uses SASL SCRAM-SHA-512 Authentication. `tls` type uses TLS Client Authentication. `tls` type is supported only on TLS listeners.`custom` type allows for any authentication type to be used.
+                                  - sasl_scram_and_plain
+                                description: "Authentication type. `oauth` type uses SASL OAUTHBEARER Authentication. `scram-sha-512` type uses SASL SCRAM-SHA-512 Authentication. `tls` type uses TLS Client Authentication. `tls` type is supported only on TLS listeners.`custom` type allows for any authentication type to be used.`sasl_scram_and_plain` type uses SASL SCRAM-SHA-512 and PLAINTEXT Authentication, either can be used. "
                               userInfoEndpointUri:
                                 type: string
                                 description: 'URI of the User Info Endpoint to use as a fallback to obtaining the user id when the Introspection Endpoint does not return information that can be used for the user id. '

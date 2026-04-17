@@ -19,6 +19,7 @@ import io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListenerConfigurati
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthentication;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationOAuth;
+import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationSaslScramAndPlain;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationScramSha512;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationTls;
 import io.strimzi.api.kafka.model.kafka.quotas.QuotasPlugin;
@@ -521,6 +522,12 @@ public class KafkaBrokerConfigurationBuilder {
             writer.println(String.format("listener.name.%s.scram-sha-512.sasl.jaas.config=%s", listenerNameInProperty,
                     AuthenticationUtils.jaasConfig("org.apache.kafka.common.security.scram.ScramLoginModule", Map.of())));
             writer.println(String.format("listener.name.%s.sasl.enabled.mechanisms=SCRAM-SHA-512", listenerNameInProperty));
+            writer.println();
+        } else if (auth instanceof KafkaListenerAuthenticationSaslScramAndPlain) {
+            securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, true)));
+            writer.println(String.format("listener.name.%s.sasl.enabled.mechanisms=SCRAM-SHA-512,PLAIN", listenerNameInProperty));
+            writer.println(String.format("listener.name.%s.scram-sha-512.sasl.jaas.config=%s", listenerNameInProperty,
+                    AuthenticationUtils.jaasConfig("org.apache.kafka.common.security.scram.ScramLoginModule", Map.of())));
             writer.println();
         } else if (auth instanceof KafkaListenerAuthenticationTls) {
             securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, false)));

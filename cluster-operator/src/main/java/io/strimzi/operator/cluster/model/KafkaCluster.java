@@ -113,6 +113,7 @@ public class KafkaCluster extends AbstractModel implements SupportsMetrics, Supp
     private static final String ENV_VAR_KAFKA_METRICS_ENABLED = "KAFKA_METRICS_ENABLED";
     private static final String ENV_VAR_STRIMZI_OPA_AUTHZ_TRUSTED_CERTS = "STRIMZI_OPA_AUTHZ_TRUSTED_CERTS";
     private static final String ENV_VAR_STRIMZI_KEYCLOAK_AUTHZ_TRUSTED_CERTS = "STRIMZI_KEYCLOAK_AUTHZ_TRUSTED_CERTS";
+    private static final String ENV_VAR_AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN = "AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN";
 
     // For port names in services, a 'tcp-' prefix is added to support Istio protocol selection
     // This helps Istio to avoid using a wildcard listener and instead present IP:PORT pairs which effects
@@ -1532,6 +1533,11 @@ public class KafkaCluster extends AbstractModel implements SupportsMetrics, Supp
             varList.add(ContainerUtils.createEnvVar(ENV_VAR_KAFKA_INIT_EXTERNAL_ADDRESS, "TRUE"));
         }
 
+        if (ListenersUtils.hasListenerWithSaslScramAndPLain(listeners)) {
+            // push this env to init container to be able to create the users
+            varList.add(ContainerUtils.createEnvVar(ENV_VAR_AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN, "true"));
+        }
+
         // Add shared environment variables used for all containers
         varList.addAll(sharedEnvironmentProvider.variables());
 
@@ -1542,7 +1548,7 @@ public class KafkaCluster extends AbstractModel implements SupportsMetrics, Supp
 
     private Container createInitContainer(ImagePullPolicy imagePullPolicy, KafkaPool pool) {
         if (pool.isBroker()
-                && (rack != null || !ListenersUtils.nodePortListeners(listeners).isEmpty())) {
+                && (rack != null || !ListenersUtils.nodePortListeners(listeners).isEmpty() || ListenersUtils.hasListenerWithSaslScramAndPLain(listeners))) {
             return ContainerUtils.createContainer(
                     INIT_NAME,
                     initImage,

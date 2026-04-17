@@ -13,6 +13,7 @@ import io.strimzi.api.kafka.model.kafka.listener.ListenerAddressBuilder;
 import io.strimzi.api.kafka.model.kafka.listener.ListenerStatus;
 import io.strimzi.api.kafka.model.kafka.listener.ListenerStatusBuilder;
 import io.strimzi.test.ReadWriteUtils;
+import io.strimzi.test.TestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.URISyntaxException;
@@ -202,5 +203,61 @@ public class KafkaTest extends AbstractCrdTest<Kafka> {
 
         assertThat(listeners.get(0).getName(), is("plain"));
         assertThat(listeners.get(1).getName(), is("external"));
+    }
+
+    @Test
+    public void testSaslScramAndPlainListenerSerialization() throws URISyntaxException {
+        List<GenericKafkaListener> listeners = Collections.singletonList(
+                new GenericKafkaListenerBuilder()
+                        .withName("lst")
+                        .withPort(9092)
+                        .withType(KafkaListenerType.INTERNAL)
+                        .withTls(false)
+                        .withNewKafkaListenerAuthenticationSaslScramAndPlainAuth()
+                        .endKafkaListenerAuthenticationSaslScramAndPlainAuth()
+                        .build()
+        );
+
+        Kafka kafka = new KafkaBuilder()
+                .withNewMetadata()
+                .withName("my-cluster")
+                .withNamespace("my-namespace")
+                .endMetadata()
+                .withNewSpec()
+                .withNewZookeeper()
+                .withReplicas(1)
+                .withNewEphemeralStorage()
+                .endEphemeralStorage()
+                .endZookeeper()
+                .withNewKafka()
+                .withReplicas(1)
+                .withListeners(listeners)
+                .withNewEphemeralStorage()
+                .endEphemeralStorage()
+                .endKafka()
+                .withNewEntityOperator()
+                .withNewTopicOperator()
+                .endTopicOperator()
+                .withNewUserOperator()
+                .endUserOperator()
+                .endEntityOperator()
+                .endSpec()
+                .build();
+
+        String path = Objects.requireNonNull(this.getClass().getResource("Kafka-new-sasl-scram-and-plain-listener-serialization.yaml")).toURI().getPath();
+        assertThat(TestUtils.toYamlString(kafka), is(TestUtils.getFileAsString(path)));
+    }
+
+    @Test
+    public void testSaslScramAndPlainListener() {
+        Kafka model = TestUtils.fromYaml("Kafka_sasl_scram_and_plain" + ".yaml", Kafka.class);
+
+        assertThat(model.getSpec().getKafka().getListeners(), is(notNullValue()));
+        assertThat(model.getSpec().getKafka().getListeners().size(), is(2));
+
+        List<GenericKafkaListener> listeners = model.getSpec().getKafka().getListeners();
+
+        assertThat(listeners.get(0).getAuth().getType(), is("sasl_scram_and_plain"));
+        assertThat(listeners.get(1).getAuth().getType(), is("tls"));
     }
 }
