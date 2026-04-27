@@ -1,0 +1,32 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: admin
+  labels:
+    strimzi.io/cluster: my-cluster  # Match your Kafka cluster name
+spec:
+  authentication:
+    type: scram-sha-512  # Can also be tls if you're using SSL certificates
+  authorization:
+    type: simple
+    acls:
+      # Cluster-wide admin permissions
+      - resource:
+          type: cluster
+          name: kafka-cluster
+        operation: All
+        host: "*"
+      # All topics permissions
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: All
+        host: "*"
+      # All groups permissions
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: All
+        host: "*"

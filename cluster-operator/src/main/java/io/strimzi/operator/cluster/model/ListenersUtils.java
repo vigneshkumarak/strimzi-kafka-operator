@@ -13,6 +13,7 @@ import io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListenerConfigurati
 import io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListenerConfigurationBroker;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationOAuth;
+import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationSaslScramAndPlain;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerType;
 import io.strimzi.api.kafka.model.kafka.listener.NodeAddressType;
 
@@ -29,6 +30,18 @@ public class ListenersUtils {
     /*test*/ static final String BACKWARDS_COMPATIBLE_PLAIN_PORT_NAME = "tcp-clients";
     /*test*/ static final String BACKWARDS_COMPATIBLE_TLS_PORT_NAME = "tcp-clientstls";
     /*test*/ static final String BACKWARDS_COMPATIBLE_EXTERNAL_PORT_NAME = "tcp-external";
+
+    /**
+     * Finds out if any of the listeners has sasl_scram_and_plain authentication enabled
+     *
+     * @param listeners List of all listeners
+     *
+     * @return          True if any listener in the list is using sasl_scram_and_plain authentication. False otherwise.
+     */
+    public static boolean hasListenerWithSaslScramAndPLain(List<GenericKafkaListener> listeners)    {
+        return internalListeners(listeners).stream()
+                .anyMatch(ListenersUtils::isListenerWithSaslScramAndPlain);
+    }
 
     /**
      * Finds out if any of the listeners has OAuth authentication enabled
@@ -68,6 +81,20 @@ public class ListenersUtils {
             return false;
 
         return KafkaListenerAuthenticationCustom.TYPE_CUSTOM.equals(listener.getAuth().getType());
+    }
+
+    /**
+     * Checks whether the listener is using sasl_scram_and_plain authentication
+     *
+     * @param listener  Listener to check
+     *
+     * @return  True if the listener uses sasl_scram_and_plain authentication. False otherwise.
+     */
+    public static boolean isListenerWithSaslScramAndPlain(GenericKafkaListener listener) {
+        if (listener.getAuth() == null || listener.getAuth().getType() == null)
+            return false;
+
+        return KafkaListenerAuthenticationSaslScramAndPlain.SASL_SCRAM_AND_PLAIN.equals(listener.getAuth().getType());
     }
 
     /**

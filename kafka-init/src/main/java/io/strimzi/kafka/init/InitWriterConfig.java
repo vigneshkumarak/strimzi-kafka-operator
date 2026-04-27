@@ -5,6 +5,8 @@
 package io.strimzi.kafka.init;
 
 import io.strimzi.operator.common.config.ConfigParameter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,6 +21,7 @@ import static io.strimzi.operator.common.config.ConfigParameterParser.STRING;
  * Init Writer configuration
  */
 public class InitWriterConfig {
+    private static final Logger LOGGER = LogManager.getLogger(InitWriterConfig.class);
     private static final Map<String, ConfigParameter<?>> CONFIG_VALUES = new HashMap<>();
     /**
      * Folder where the rackid file is written
@@ -40,6 +43,22 @@ public class InitWriterConfig {
      * The address type which should be preferred in the selection
      */
     public static final ConfigParameter<String> EXTERNAL_ADDRESS_TYPE = new ConfigParameter<>("EXTERNAL_ADDRESS_TYPE", STRING, null, CONFIG_VALUES);
+    /**
+     * FWSS secret prefix to filter secrets
+     */
+    public static final ConfigParameter<String> FWSS_SECRETS_NAME = new ConfigParameter<>("FWSS_SECRETS_NAME", STRING, "central--kafka", CONFIG_VALUES);
+    /**
+     * Authentication is of type sasl_scram_and_plain or others.
+     */
+    public static final ConfigParameter<String> AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN = new ConfigParameter<>("AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN", STRING, "false", CONFIG_VALUES);
+    /**
+     * The Fwss secrets label key that we should look for in the secrets while generating jaas.conf.
+     */
+    public static final ConfigParameter<String> FWSS_LABEL_KEY = new ConfigParameter<>("FWSS_LABEL_KEY", STRING, "fwss.freshworks.com/secrets-managed", CONFIG_VALUES);
+    /**
+     * The Fwss secrets label value that we should look for in the secrets while generating jaas.conf.
+     */
+    public static final ConfigParameter<String> FWSS_LABEL_VALUE = new ConfigParameter<>("FWSS_LABEL_VALUE", STRING, "true", CONFIG_VALUES);
     private final Map<String, Object> map;
 
     /**
@@ -113,6 +132,36 @@ public class InitWriterConfig {
         return get(EXTERNAL_ADDRESS_TYPE);
     }
 
+    /**
+     * @return FWSS secret prefix to filter secrets
+     */
+    public String getFwssSecretName() {
+        return get(FWSS_SECRETS_NAME);
+    }
+
+    /**
+     * @return FWSS secret label key that we should look for.
+     */
+    public String getFwssLabelKey() {
+        return get(FWSS_LABEL_KEY);
+    }
+
+    /**
+     * getRunningNamespace
+     * @return FWSS secret label value that we should look for.
+     */
+    public String getFwssLabelValue() {
+        return get(FWSS_LABEL_VALUE);
+    }
+
+    /**
+     * @return if Authentication is of type sasl_scram_and_plain or others.
+     */
+    public boolean getIfAuthenticationIsSaslScramAndPlain() {
+        String result = get(AUTHENTICATION_IS_SASL_SCRAM_AND_PLAIN);
+        return result.equals("true");
+    }
+
     @Override
     public String toString() {
         return "InitWriterConfig(" +
@@ -121,6 +170,10 @@ public class InitWriterConfig {
                 ",externalAddress=" + isExternalAddress() +
                 ",initFolder=" + getInitFolder() +
                 ",addressType=" + getAddressType() +
+                ",fwssSecretName=" + getFwssSecretName() +
+                ",authenticationIsSaslScramAndPlain=" + getIfAuthenticationIsSaslScramAndPlain() +
+                ",fwss_label_key=" + getFwssLabelKey() +
+                ",fwss_label_value=" + getFwssLabelValue() +
                 ")";
     }
 }

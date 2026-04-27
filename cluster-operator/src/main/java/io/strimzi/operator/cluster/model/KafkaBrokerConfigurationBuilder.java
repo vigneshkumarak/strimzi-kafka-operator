@@ -19,6 +19,7 @@ import io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListenerConfigurati
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthentication;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationOAuth;
+import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationSaslScramAndPlain;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationScramSha512;
 import io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthenticationTls;
 import io.strimzi.api.kafka.model.kafka.quotas.QuotasPlugin;
@@ -114,17 +115,17 @@ public class KafkaBrokerConfigurationBuilder {
             printSectionHeader("Cruise Control configuration");
             writer.println(CruiseControlConfigurationParameters.METRICS_TOPIC_NAME + "=" + ccMetricsReporter.topicName());
 
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_ENDPOINT_ID_ALGO + "=HTTPS");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_ENDPOINT_ID_ALGO + "=HTTPS");
             // using the brokers service because the Admin client, in the Cruise Control metrics reporter, is not able to connect
             // to the pods behind the bootstrap one when they are not ready during startup.
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_BOOTSTRAP_SERVERS + "=" + KafkaResources.brokersServiceName(clusterName) + ":9091");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SECURITY_PROTOCOL + "=SSL");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_TYPE + "=PKCS12");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_LOCATION + "=/tmp/kafka/cluster.keystore.p12");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_PASSWORD + "=" + PLACEHOLDER_CERT_STORE_PASSWORD);
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_TYPE + "=PKCS12");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_LOCATION + "=/tmp/kafka/cluster.truststore.p12");
-            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_PASSWORD + "=" + PLACEHOLDER_CERT_STORE_PASSWORD);
+            writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_BOOTSTRAP_SERVERS + "=" + KafkaResources.brokersServiceName(clusterName) + ":9096");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SECURITY_PROTOCOL + "=SSL");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_TYPE + "=PKCS12");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_LOCATION + "=/tmp/kafka/cluster.keystore.p12");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_KEYSTORE_PASSWORD + "=" + PLACEHOLDER_CERT_STORE_PASSWORD);
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_TYPE + "=PKCS12");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_LOCATION + "=/tmp/kafka/cluster.truststore.p12");
+            //writer.println(CruiseControlConfigurationParameters.METRICS_REPORTER_SSL_TRUSTSTORE_PASSWORD + "=" + PLACEHOLDER_CERT_STORE_PASSWORD);
             writer.println(CruiseControlConfigurationParameters.METRICS_TOPIC_AUTO_CREATE + "=true");
 
             if (ccMetricsReporter.numPartitions() != null) {
@@ -354,8 +355,10 @@ public class KafkaBrokerConfigurationBuilder {
             }
         }
 
-        // Control plane listener is on all ZooKeeper based brokers, needed during migration as well, when broker still using ZooKeeper but KRaft controllers are ready
-        if (node.broker() && kafkaMetadataConfigState.isZooKeeperToMigration()) {
+        // Control plane listener property is only needed during ZK-to-KRaft migration (PRE_MIGRATION / MIGRATION).
+        // In pure ZK mode, omitting it causes Kafka to default to inter.broker.listener.name,
+        // which is required for cluster stretching where the control plane must use the shared cross-env listener.
+        if (node.broker() && !kafkaMetadataConfigState.isZooKeeper() && kafkaMetadataConfigState.isZooKeeperToMigration()) {
             writer.println("control.plane.listener.name=" + CONTROL_PLANE_LISTENER_NAME);
         }
 
@@ -519,6 +522,12 @@ public class KafkaBrokerConfigurationBuilder {
             writer.println(String.format("listener.name.%s.scram-sha-512.sasl.jaas.config=%s", listenerNameInProperty,
                     AuthenticationUtils.jaasConfig("org.apache.kafka.common.security.scram.ScramLoginModule", Map.of())));
             writer.println(String.format("listener.name.%s.sasl.enabled.mechanisms=SCRAM-SHA-512", listenerNameInProperty));
+            writer.println();
+        } else if (auth instanceof KafkaListenerAuthenticationSaslScramAndPlain) {
+            securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, true)));
+            writer.println(String.format("listener.name.%s.sasl.enabled.mechanisms=SCRAM-SHA-512,PLAIN", listenerNameInProperty));
+            writer.println(String.format("listener.name.%s.scram-sha-512.sasl.jaas.config=%s", listenerNameInProperty,
+                    AuthenticationUtils.jaasConfig("org.apache.kafka.common.security.scram.ScramLoginModule", Map.of())));
             writer.println();
         } else if (auth instanceof KafkaListenerAuthenticationTls) {
             securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, false)));
@@ -867,6 +876,16 @@ public class KafkaBrokerConfigurationBuilder {
 
             // Configure the configuration providers => we have to inject the Strimzi ones
             configProviders(userConfig);
+
+            // In POST_MIGRATION or KRAFT states, brokers run in pure KRaft mode and must not
+            // have ZooKeeper configuration. User-provided ZK overrides (used during cluster
+            // stretching) are stripped automatically so they can remain in the CR for rollback
+            // safety without breaking the broker config.
+            if (node.broker() && kafkaMetadataConfigState.isPostMigrationToKRaft()) {
+                userConfig.removeConfigOption("zookeeper.connect");
+                userConfig.removeConfigOption("zookeeper.clientCnxnSocket");
+                userConfig.removeConfigOption("zookeeper.ssl.client.enable");
+            }
 
             if (injectCcMetricsReporter)  {
                 // We configure the Cruise Control Metrics Reporter is needed

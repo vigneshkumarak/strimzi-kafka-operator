@@ -4,6 +4,7 @@
  */
 package io.strimzi.kafka.init;
 
+import io.fabric8.kubernetes.api.model.SecretList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.strimzi.operator.common.OperatorKubernetesClientBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +22,7 @@ public class Main {
      * @param args  Array with arguments form the command line
      */
     public static void main(String[] args) {
+        LOGGER.info("FW Custom Init-kafka is starting");
         final String strimziVersion = Main.class.getPackage().getImplementationVersion();
         LOGGER.info("Init-kafka {} is starting", strimziVersion);
         InitWriterConfig config = InitWriterConfig.fromMap(System.getenv());
@@ -31,14 +33,35 @@ public class Main {
 
         InitWriter writer = new InitWriter(client, config);
 
+        if (config.getIfAuthenticationIsSaslScramAndPlain()) {
+            String namespace = client.getNamespace();
+
+            if (namespace == null || namespace.isEmpty()) {
+                LOGGER.error("Namespace is null or empty");
+                System.exit(1);
+            }
+
+            // List all secrets in the current namespace
+            SecretList secretList = client.secrets().inNamespace(namespace)
+                    .withLabel(config.getFwssLabelKey(), config.getFwssLabelValue())
+                    .list();
+            LOGGER.info("Process Secrets");
+            if (!writer.writeFwssSecretsToJaasConf(secretList)) {
+                LOGGER.error("Failed to write fwss secrets");
+                System.exit(1);
+            }
+        }
+
         if (config.getRackTopologyKey() != null) {
             if (!writer.writeRack()) {
+                LOGGER.error("Failed to write rack topology");
                 System.exit(1);
             }
         }
 
         if (config.isExternalAddress()) {
             if (!writer.writeExternalAddress()) {
+                LOGGER.error("Failed to write external address");
                 System.exit(1);
             }
         }

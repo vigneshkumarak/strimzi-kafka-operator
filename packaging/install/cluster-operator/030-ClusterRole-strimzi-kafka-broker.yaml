@@ -13,3 +13,11 @@ rules:
       - nodes
     verbs:
       - get
+  - apiGroups:
+      - ""
+    resources:
+      # This permission is used while in scram_and_sasl used together
+      - secrets
+    verbs:
+      - list
+      - get

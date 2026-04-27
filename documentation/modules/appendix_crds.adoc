@@ -87,7 +87,7 @@ include::../api/io.strimzi.api.kafka.model.kafka.KafkaClusterSpec.adoc[leveloffs
 |Configures listeners to provide access to Kafka brokers.
 |config
 |map
-|Kafka broker config properties with the following prefixes cannot be set: listeners, advertised., broker., listener., host.name, port, inter.broker.listener.name, sasl., ssl., security., password., log.dir, zookeeper.connect, zookeeper.set.acl, zookeeper.ssl, zookeeper.clientCnxnSocket, authorizer., super.user, cruise.control.metrics.topic, cruise.control.metrics.reporter.bootstrap.servers, node.id, process.roles, controller., metadata.log.dir, zookeeper.metadata.migration.enable, client.quota.callback.static.kafka.admin., client.quota.callback.static.produce, client.quota.callback.static.fetch, client.quota.callback.static.storage.per.volume.limit.min.available., client.quota.callback.static.excluded.principal.name.list (with the exception of: zookeeper.connection.timeout.ms, sasl.server.max.receive.size, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols, ssl.secure.random.implementation, cruise.control.metrics.topic.num.partitions, cruise.control.metrics.topic.replication.factor, cruise.control.metrics.topic.retention.ms, cruise.control.metrics.topic.auto.create.retries, cruise.control.metrics.topic.auto.create.timeout.ms, cruise.control.metrics.topic.min.insync.replicas, controller.quorum.election.backoff.max.ms, controller.quorum.election.timeout.ms, controller.quorum.fetch.timeout.ms).
+|Kafka broker config properties with the following prefixes cannot be set: listeners, advertised., broker., listener., host.name, port, inter.broker.listener.name, sasl., ssl., security., password., log.dir, zookeeper.connect, zookeeper.set.acl, zookeeper.ssl, zookeeper.clientCnxnSocket, authorizer., super.user, cruise.control.metrics.topic, cruise.control.metrics.reporter.bootstrap.servers, node.id, process.roles, controller., metadata.log.dir, zookeeper.metadata.migration.enable, client.quota.callback.static.kafka.admin., client.quota.callback.static.produce, client.quota.callback.static.fetch, client.quota.callback.static.storage.per.volume.limit.min.available., client.quota.callback.static.excluded.principal.name.list (with the exception of: zookeeper.connection.timeout.ms, sasl.server.max.receive.size, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols, ssl.secure.random.implementation, cruise.control.metrics.topic.num.partitions, cruise.control.metrics.topic.replication.factor, cruise.control.metrics.topic.retention.ms, cruise.control.metrics.topic.auto.create.retries, cruise.control.metrics.topic.auto.create.timeout.ms, cruise.control.metrics.topic.min.insync.replicas, controller.quorum.election.backoff.max.ms, controller.quorum.election.timeout.ms, controller.quorum.fetch.timeout.ms, inter.broker.listener.name, control.plane.listener.name, zookeeper.connect, zookeeper.clientCnxnSocket, zookeeper.ssl.client.enable, cruise.control.metrics.topic, cruise.control.metrics.reporter.bootstrap.servers).
 |storage
 |xref:type-EphemeralStorage-{context}[`EphemeralStorage`], xref:type-PersistentClaimStorage-{context}[`PersistentClaimStorage`], xref:type-JbodStorage-{context}[`JbodStorage`]
 |Storage configuration (disk). Cannot be updated. This property is required when node pools are not used.
@@ -169,7 +169,7 @@ include::../api/io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListener.a
 |boolean
 |Enables TLS encryption on the listener. This is a required property. For `route` and `ingress` type listeners, TLS encryption must be always enabled.
 |authentication
-|xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`]
+|xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`], xref:type-KafkaListenerAuthenticationSaslScramAndPlain-{context}[`KafkaListenerAuthenticationSaslScramAndPlain`]
 |Authentication configuration for this listener.
 |configuration
 |xref:type-GenericKafkaListenerConfiguration-{context}[`GenericKafkaListenerConfiguration`]
@@ -185,7 +185,7 @@ include::../api/io.strimzi.api.kafka.model.kafka.listener.GenericKafkaListener.a
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationTls` type from xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationTls` type from xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`], xref:type-KafkaListenerAuthenticationSaslScramAndPlain-{context}[`KafkaListenerAuthenticationSaslScramAndPlain`].
 It must have the value `tls` for the type `KafkaListenerAuthenticationTls`.
 [cols="2,2,3a",options="header"]
 |====
@@ -201,7 +201,7 @@ It must have the value `tls` for the type `KafkaListenerAuthenticationTls`.
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationScramSha512` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationScramSha512` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`], xref:type-KafkaListenerAuthenticationSaslScramAndPlain-{context}[`KafkaListenerAuthenticationSaslScramAndPlain`].
 It must have the value `scram-sha-512` for the type `KafkaListenerAuthenticationScramSha512`.
 [cols="2,2,3a",options="header"]
 |====
@@ -217,7 +217,7 @@ It must have the value `scram-sha-512` for the type `KafkaListenerAuthentication
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationOAuth` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationOAuth` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`], xref:type-KafkaListenerAuthenticationSaslScramAndPlain-{context}[`KafkaListenerAuthenticationSaslScramAndPlain`].
 It must have the value `oauth` for the type `KafkaListenerAuthenticationOAuth`.
 [cols="2,2,3a",options="header"]
 |====
@@ -394,7 +394,7 @@ include::../api/io.strimzi.api.kafka.model.kafka.listener.KafkaListenerAuthentic
 == `KafkaListenerAuthenticationCustom` schema properties
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationCustom` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationCustom` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationSaslScramAndPlain-{context}[`KafkaListenerAuthenticationSaslScramAndPlain`].
 It must have the value `custom` for the type `KafkaListenerAuthenticationCustom`.
 [cols="2,2,3a",options="header"]
 |====
@@ -411,6 +411,22 @@ It must have the value `custom` for the type `KafkaListenerAuthenticationCustom`
 |secrets
 |xref:type-GenericSecretSource-{context}[`GenericSecretSource`] array
 |Secrets to be mounted to `/opt/kafka/custom-authn-secrets/custom-listener-<listener_name>-<port>/<secret_name>`.
+|====
+
+[id='type-KafkaListenerAuthenticationSaslScramAndPlain-{context}']
+= `KafkaListenerAuthenticationSaslScramAndPlain` schema reference
+
+Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
+
+
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationSaslScramAndPlain` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
+It must have the value `sasl_scram_and_plain` for the type `KafkaListenerAuthenticationSaslScramAndPlain`.
+[cols="2,2,3a",options="header"]
+|====
+|Property |Property type |Description
+|type
+|string
+|Must be `sasl_scram_and_plain`.
 |====
 
 [id='type-GenericKafkaListenerConfiguration-{context}']
