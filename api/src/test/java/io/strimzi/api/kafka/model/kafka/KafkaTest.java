@@ -13,7 +13,6 @@ import io.strimzi.api.kafka.model.kafka.listener.ListenerAddressBuilder;
 import io.strimzi.api.kafka.model.kafka.listener.ListenerStatus;
 import io.strimzi.api.kafka.model.kafka.listener.ListenerStatusBuilder;
 import io.strimzi.test.ReadWriteUtils;
-import io.strimzi.test.TestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.URISyntaxException;
@@ -245,12 +244,12 @@ public class KafkaTest extends AbstractCrdTest<Kafka> {
                 .build();
 
         String path = Objects.requireNonNull(this.getClass().getResource("Kafka-new-sasl-scram-and-plain-listener-serialization.yaml")).toURI().getPath();
-        assertThat(TestUtils.toYamlString(kafka), is(TestUtils.getFileAsString(path)));
+        assertThat(ReadWriteUtils.writeObjectToYamlString(kafka), is(ReadWriteUtils.readFile(path)));
     }
 
     @Test
     public void testSaslScramAndPlainListener() {
-        Kafka model = TestUtils.fromYaml("Kafka_sasl_scram_and_plain" + ".yaml", Kafka.class);
+        Kafka model = ReadWriteUtils.readObjectFromYamlFileInResources("Kafka_sasl_scram_and_plain" + ".yaml", Kafka.class);
 
         assertThat(model.getSpec().getKafka().getListeners(), is(notNullValue()));
         assertThat(model.getSpec().getKafka().getListeners().size(), is(2));

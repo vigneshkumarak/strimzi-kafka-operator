@@ -46,6 +46,17 @@ public class KafkaBrokerConfigurationDiff extends AbstractJsonDiff {
     /**
      * These options are skipped because they contain placeholders
      * 909[1-4] is for skipping all (internal, plain, secured, external) listeners properties
+     *
+     * Cluster-stretching fork: the ".*-[0-9]{2,5}\." patterns originally matched
+     * Strimzi's auto-generated {@code <name>-<port>} listener identifier (e.g.
+     * {@code listener.name.internal-9094.ssl.keystore.location}). After our patch in
+     * {@link io.strimzi.operator.cluster.model.ListenersUtils#identifier} the identifier
+     * is now just {@code <name>} (e.g. {@code listener.name.internal.ssl.keystore.location}).
+     * Each pattern is duplicated to also match the no-port form, otherwise the diff engine
+     * sees the keystore path as drift and triggers a rolling restart on every reconcile.
+     * The {@code listener\\.name\\.[a-z0-9]+\\.} prefix is bounded by the same regex
+     * Strimzi enforces on listener names ({@code GenericKafkaListener.LISTENER_NAME_REGEX})
+     * so this won't accidentally swallow other properties.
      */
     public static final Pattern IGNORABLE_PROPERTIES = Pattern.compile(
             "^(broker\\.id"
@@ -58,6 +69,15 @@ public class KafkaBrokerConfigurationDiff extends AbstractJsonDiff {
             + "|.*-[0-9]{2,5}\\.ssl\\.client\\.auth"
             + "|.*-[0-9]{2,5}\\.scram-sha-512\\.sasl\\.jaas\\.config"
             + "|.*-[0-9]{2,5}\\.sasl\\.enabled\\.mechanisms"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.keystore\\.location"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.keystore\\.password"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.keystore\\.type"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.truststore\\.location"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.truststore\\.password"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.truststore\\.type"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.ssl\\.client\\.auth"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.scram-sha-512\\.sasl\\.jaas\\.config"
+            + "|listener\\.name\\.[a-z0-9]{1,11}\\.sasl\\.enabled\\.mechanisms"
             + "|advertised\\.listeners"
             + "|inter\\.broker\\.listener\\.name"
             + "|control\\.plane\\.listener\\.name"

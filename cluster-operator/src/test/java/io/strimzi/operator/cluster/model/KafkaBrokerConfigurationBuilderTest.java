@@ -2909,7 +2909,7 @@ public class KafkaBrokerConfigurationBuilderTest {
                 .build();
 
         String configuration = new KafkaBrokerConfigurationBuilder(Reconciliation.DUMMY_RECONCILIATION, NODE_REF, KafkaMetadataConfigurationState.ZK)
-                .withListeners("my-cluster", "my-namespace", singletonList(listener), listenerId -> "dummy-advertised-address", listenerId -> "1919")
+                .withListeners("my-cluster", KAFKA_3_9_0, "my-namespace", singletonList(listener), listenerId -> "dummy-advertised-address", listenerId -> "1919")
                 .build();
 
         assertThat(configuration, isEquivalent("broker.id=2",

@@ -243,21 +243,32 @@ public class ListenersUtils {
     /**
      * Generates a listener identifier which is used to name the related volumes, volume mounts, etc.
      *
+     * Cluster-stretching fork: returns just {@code listener.getName()} (no {@code -port} suffix)
+     * so that the listener appears in {@code server.properties} as the bare upper-cased name
+     * (e.g. {@code INTERNAL} instead of {@code INTERNAL-9094}). This is desired by downstream
+     * monitoring/tooling that filters JMX metrics on a fixed listener-name label.
+     *
+     * Uniqueness is preserved because {@link ListenersValidator} already enforces that every
+     * listener has a unique {@code name} within the CR.
+     *
      * @param listener  Listener for which the name should be generated
      * @return          Identifier string
      */
     public static String identifier(GenericKafkaListener listener) {
-        return listener.getName() + "-" + listener.getPort();
+        return listener.getName();
     }
 
     /**
-     * Generates a listener identifier which can be used in environment variables
+     * Generates a listener identifier which can be used in environment variables.
+     *
+     * Cluster-stretching fork: returns just the upper-cased {@code listener.getName()} (no
+     * {@code _port} suffix). See {@link #identifier(GenericKafkaListener)}.
      *
      * @param listener  Listener for which the name should be generated
      * @return          Identifier string
      */
     public static String envVarIdentifier(GenericKafkaListener listener) {
-        return listener.getName().toUpperCase(Locale.ENGLISH) + "_" + listener.getPort();
+        return listener.getName().toUpperCase(Locale.ENGLISH);
     }
 
     /**

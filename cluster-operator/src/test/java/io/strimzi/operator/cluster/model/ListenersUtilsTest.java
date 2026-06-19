@@ -391,12 +391,14 @@ public class ListenersUtilsTest {
 
     @ParallelTest
     public void testIdentifier()    {
-        assertThat(ListenersUtils.identifier(oldPlain), is("plain-9092"));
+        // Cluster-stretching fork: identifier is just the bare name (no -port suffix).
+        assertThat(ListenersUtils.identifier(oldPlain), is("plain"));
     }
 
     @ParallelTest
     public void testEnvVarIdentifier()    {
-        assertThat(ListenersUtils.envVarIdentifier(oldPlain), is("PLAIN_9092"));
+        // Cluster-stretching fork: envVarIdentifier is just the upper-cased name (no _port suffix).
+        assertThat(ListenersUtils.envVarIdentifier(oldPlain), is("PLAIN"));
     }
 
     @ParallelTest
