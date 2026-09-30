@@ -31,7 +31,10 @@ function third_party_libs {
 
     for version_lib in "${libs[@]}"
     do
-        mvn dependency:copy-dependencies ${MVN_ARGS} -f kafka-thirdparty-libs/${version_lib}/pom.xml
+        # `clean` is required: dependency:copy-dependencies does not wipe target/dependency/,
+        # so a previous build's jars (e.g. an older transitive gson) would be re-zipped and
+        # cause class collisions detected by find-colliding-classes.sh.
+        mvn clean dependency:copy-dependencies ${MVN_ARGS} -f kafka-thirdparty-libs/${version_lib}/pom.xml
         mkdir -p ./binaries/kafka-thirdparty-libs
         rm -f ./binaries/kafka-thirdparty-libs/${version_lib}.zip
         zip -j ./binaries/kafka-thirdparty-libs/${version_lib}.zip kafka-thirdparty-libs/${version_lib}/target/dependency/*
@@ -42,7 +45,8 @@ function cruise_control {
     # Copy the Cruise Control JARs
     echo "Downloading Cruise Control JARs"
 
-    mvn dependency:copy-dependencies ${MVN_ARGS} -f kafka-thirdparty-libs/cc/pom.xml
+    # `clean` here for the same reason as in third_party_libs above.
+    mvn clean dependency:copy-dependencies ${MVN_ARGS} -f kafka-thirdparty-libs/cc/pom.xml
     mkdir -p ./binaries/kafka-thirdparty-libs
     rm -f ./binaries/kafka-thirdparty-libs/cc.zip
     zip -j ./binaries/kafka-thirdparty-libs/cc.zip kafka-thirdparty-libs/cc/target/dependency/*

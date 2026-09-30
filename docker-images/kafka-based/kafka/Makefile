@@ -30,12 +30,19 @@ clean:
 	touch .tracing-agent.tmp
 
 .thirdparty-libs-$(THIRD_PARTY_LIBS).tmp: ../../artifacts/binaries/kafka-thirdparty-libs/$(THIRD_PARTY_LIBS).zip
-	test -d tmp/thirdparty-libs-$(THIRD_PARTY_LIBS) || mkdir -p tmp/thirdparty-libs-$(THIRD_PARTY_LIBS)
+	# Wipe the target dir first: unzip -o only overwrites same-named files, it does
+	# NOT delete files that are no longer in the zip. Without this, jars from a
+	# previous (different) zip remain on disk and get COPYed into the image,
+	# causing class-collision failures (e.g. two gson versions side by side).
+	rm -rf tmp/thirdparty-libs-$(THIRD_PARTY_LIBS)
+	mkdir -p tmp/thirdparty-libs-$(THIRD_PARTY_LIBS)
 	unzip -qoj ../../artifacts/binaries/kafka-thirdparty-libs/$(THIRD_PARTY_LIBS).zip -d tmp/thirdparty-libs-$(THIRD_PARTY_LIBS)
 	touch .thirdparty-libs-$(THIRD_PARTY_LIBS).tmp
 
 .thirdparty-libs-cc.tmp: ../../artifacts/binaries/kafka-thirdparty-libs/cc.zip
-	test -d tmp/cc || mkdir -p tmp/cc
+	# See note in .thirdparty-libs-$(THIRD_PARTY_LIBS).tmp about wiping the dir.
+	rm -rf tmp/cc
+	mkdir -p tmp/cc
 	unzip -qo ../../artifacts/binaries/kafka-thirdparty-libs/cc.zip -d tmp/cc
 	touch .thirdparty-libs-cc.tmp
 

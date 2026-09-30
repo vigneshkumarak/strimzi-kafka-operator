@@ -34,23 +34,49 @@ create_keystore "$STORE" "$CERTS_STORE_PASSWORD" \
     "$HOSTNAME"
 echo "Preparing keystore for replication and clienttls listener is complete"
 
-regex="^\/opt\/kafka\/certificates\/(custom|oauth)-(.+)-(.+)-certs$"
+# Handle both legacy and cluster-stretching listener identifier formats:
+#   legacy:  /opt/kafka/certificates/(custom|oauth)-<name>-<port>-certs    (e.g. oauth-internal-9094-certs)
+#   forked:  /opt/kafka/certificates/(custom|oauth)-<name>-certs           (e.g. oauth-internal-certs)
+# The fork in ListenersUtils.identifier() drops the -port suffix from the
+# directory name, so the original 3-group regex no longer matches and OAuth
+# truststore preparation would silently be skipped. We try the legacy regex
+# first (it's more specific), then fall back to the no-port form.
+regex_with_port="^\/opt\/kafka\/certificates\/(custom|oauth)-(.+)-([0-9]+)-certs$"
+regex_no_port="^\/opt\/kafka\/certificates\/(custom|oauth)-(.+)-certs$"
 for CERT_DIR in /opt/kafka/certificates/*; do
-  if [[ $CERT_DIR =~ $regex ]]; then
-    listener=${BASH_REMATCH[1]}-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}
-    echo "Preparing store for $listener listener"
-    if [[ ${BASH_REMATCH[1]} == "custom"  ]]; then
-      echo "Creating keystore /tmp/kafka/$listener.keystore.p12"
-      rm -f /tmp/kafka/"$listener".keystore.p12
-      create_keystore_without_ca_file /tmp/kafka/"$listener".keystore.p12 "$CERTS_STORE_PASSWORD" "${CERT_DIR}/tls.crt" "${CERT_DIR}/tls.key" custom-key
-    elif [[ ${BASH_REMATCH[1]} == "oauth"  ]]; then
-      trusted_certs="STRIMZI_${BASH_REMATCH[2]^^}_${BASH_REMATCH[3]}_OAUTH_TRUSTED_CERTS"
-      if [ -n "${!trusted_certs}" ]; then
-        prepare_truststore "/tmp/kafka/$listener.truststore.p12" "$CERTS_STORE_PASSWORD" "$CERT_DIR" "${!trusted_certs}"
-      fi
-    fi
-    echo "Preparing store for ${BASH_REMATCH[1]} ${BASH_REMATCH[2]} listener is complete"  
+  prefix=""
+  name=""
+  port=""
+  listener=""
+  if [[ $CERT_DIR =~ $regex_with_port ]]; then
+    prefix=${BASH_REMATCH[1]}
+    name=${BASH_REMATCH[2]}
+    port=${BASH_REMATCH[3]}
+    listener=${prefix}-${name}-${port}
+  elif [[ $CERT_DIR =~ $regex_no_port ]]; then
+    prefix=${BASH_REMATCH[1]}
+    name=${BASH_REMATCH[2]}
+    listener=${prefix}-${name}
+  else
+    continue
   fi
+
+  echo "Preparing store for $listener listener"
+  if [[ $prefix == "custom"  ]]; then
+    echo "Creating keystore /tmp/kafka/$listener.keystore.p12"
+    rm -f /tmp/kafka/"$listener".keystore.p12
+    create_keystore_without_ca_file /tmp/kafka/"$listener".keystore.p12 "$CERTS_STORE_PASSWORD" "${CERT_DIR}/tls.crt" "${CERT_DIR}/tls.key" custom-key
+  elif [[ $prefix == "oauth"  ]]; then
+    if [[ -n "$port" ]]; then
+      trusted_certs="STRIMZI_${name^^}_${port}_OAUTH_TRUSTED_CERTS"
+    else
+      trusted_certs="STRIMZI_${name^^}_OAUTH_TRUSTED_CERTS"
+    fi
+    if [ -n "${!trusted_certs}" ]; then
+      prepare_truststore "/tmp/kafka/$listener.truststore.p12" "$CERTS_STORE_PASSWORD" "$CERT_DIR" "${!trusted_certs}"
+    fi
+  fi
+  echo "Preparing store for $prefix $name listener is complete"
 done
 
 echo "Preparing truststore for client authentication"
